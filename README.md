@@ -69,6 +69,80 @@ LOGFIRE_TOKEN=your_logfire_token
   python src/04_general_chat_agent.py --interactive
   ```
 
+### 5. Reinforcement Learning - Frozen Lake DQN (`rl-games/frozen_lake_dqn.py`)
+- **Purpose**: Deep Q-Network implementation for the Frozen Lake environment
+- **Features**:
+  - Neural network-based Q-learning
+  - Experience replay buffer
+  - Target network for stability
+  - Epsilon-greedy exploration strategy
+- **Usage**: `python rl-games/frozen_lake_dqn.py`
+
+## 🧠 Reinforcement Learning - Frozen Lake DQN Algorithm
+
+### Deep Q-Network (DQN) Algorithm Steps
+
+The Frozen Lake DQN implementation demonstrates a complete reinforcement learning solution using neural networks to learn optimal navigation policies.
+
+#### **Step 1: Environment Setup**
+- Create a 4x4 Frozen Lake grid where the agent (S) must navigate from start to goal (G)
+- States: 16 possible positions (0-15), Actions: 4 directions (Left, Down, Right, Up)
+- Rewards: +1 for reaching goal, 0 for falling in holes or other actions
+
+#### **Step 2: Neural Network Architecture**
+- **Policy Network**: Takes current state as input, outputs Q-values for all 4 actions
+- **Target Network**: Copy of policy network (updated less frequently for stability)
+- Architecture: Input layer (16 nodes) → Hidden layer (16 nodes, ReLU) → Output layer (4 nodes)
+
+#### **Step 3: Experience Replay Buffer**
+- Store experiences as (state, action, reward, next_state, done) tuples
+- Randomly sample batches of experiences for training (prevents correlation issues)
+- Buffer size: 1000 experiences, Batch size: 32
+
+#### **Step 4: Action Selection (Epsilon-Greedy)**
+- **Exploration**: With probability ε (epsilon), choose random action
+- **Exploitation**: With probability (1-ε), choose action with highest Q-value
+- Start with ε = 1.0 (100% random), gradually decay to ε = 0.01
+
+#### **Step 5: Experience Collection**
+- Execute selected action in environment
+- Observe new state, reward, and whether episode ended
+- Store experience in replay buffer
+- Continue until episode terminates (goal reached or hole fallen)
+
+#### **Step 6: Q-Learning Update**
+- Sample random batch from replay buffer
+- For each experience, calculate target Q-value:
+  - **If terminated**: Target = reward
+  - **If not terminated**: Target = reward + γ × max(Q(next_state))
+- γ (gamma) = 0.9 (discount factor for future rewards)
+
+#### **Step 7: Neural Network Training**
+- Compute loss between current Q-values and target Q-values
+- Use Mean Squared Error (MSE) loss function
+- Update policy network weights using Adam optimizer
+- Learning rate: 0.001
+
+#### **Step 8: Target Network Synchronization**
+- Every 10 steps, copy policy network weights to target network
+- This prevents the "moving target" problem and stabilizes training
+
+#### **Step 9: Epsilon Decay**
+- Gradually reduce exploration rate: ε = max(ε - 1/episodes, 0.01)
+- Balance exploration vs exploitation as agent learns
+
+#### **Step 10: Convergence**
+- Train for 10,000 episodes
+- Agent learns optimal policy to navigate from start to goal
+- Save trained model and visualize learning progress
+
+### Key Innovations
+The key innovation of DQN is using a neural network to approximate Q-values instead of a lookup table, allowing it to handle large state spaces efficiently while using experience replay and target networks to ensure stable learning.
+
+### Files Generated
+- `frozen_lake_dql.pt`: Trained neural network model
+- `frozen_lake_dql.png`: Learning progress visualization (rewards and epsilon decay)
+
 ## 🎯 General Chat Agent Deep Dive
 
 ### Features
