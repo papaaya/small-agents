@@ -14,6 +14,7 @@ This folder contains detailed technical documentation for the Small Agents proje
 - [ARC Agent Reasoning](sequence-diagrams/arc-agent-reasoning.md) - Visual reasoning process
 - [Frozen Lake RL Training](sequence-diagrams/frozen-lake-training.md) - Reinforcement learning flow
 - [Tool Execution Patterns](sequence-diagrams/tool-execution.md) - Standard tool execution flow
+- [Grid Game Patterns](sequence-diagrams/grid-game-patterns.md) - Navigation, puzzle solving, and visual reasoning flows
 
 ### 🛠️ Implementation Guides
 - [Building Custom Agents](implementation/custom-agents.md) - Step-by-step guide
@@ -47,7 +48,19 @@ agent = Agent(
 
 ### Grid Game Framework
 ```python
-# Analysis → Transform → Validate pattern
+# Pattern 1: Navigation & Pathfinding
+player_pos = await find_player_position(grid)
+goal_pos = await find_goal_position(grid)
+is_valid = await validate_move(from_pos, action)
+updated_grid = await move_player_agent(grid, action)
+
+# Pattern 2: Puzzle Solving & State Transformation
+state_analysis = await analyze_grid_state(grid)
+is_valid = await valid_action(action)
+updated_grid = await update_grid(grid, action)
+reward = await get_reward(state, action)
+
+# Pattern 3: Visual Reasoning & Pattern Recognition
 analysis = await analyze_grid(grid, "input")
 transformed = await apply_transformation(grid, "rotate_90")
 is_valid = await compare_grids(transformed, expected_output)

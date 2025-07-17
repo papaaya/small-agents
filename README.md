@@ -2,6 +2,56 @@
 
 > *A journey into creating intelligent agents that can solve complex problems, play games, and reason about the world around them.*
 
+## 📋 Table of Contents
+
+### 🚀 Getting Started
+- [Quick Start](#-quick-start)
+- [What We're Building](#-what-were-building)
+
+### 🤖 Agent Showcase
+- [Weather Agent](#1-weather-agent---real-world-data-integration)
+- [General Chat Agent](#2-general-chat-agent---conversational-intelligence-)
+- [Frozen Lake Agent](#3-frozen-lake-agent---reinforcement-learning-in-action)
+- [ARC Agent](#4-arc-agent---abstract-reasoning-)
+
+### 🎮 Grid Game Patterns
+- [Navigation & Pathfinding](#pattern-1-navigation--pathfinding-frozen-lake-style)
+- [Puzzle Solving & State Transformation](#pattern-2-puzzle-solving--state-transformation-sokoban-style)
+- [Visual Reasoning & Pattern Recognition](#pattern-3-visual-reasoning--pattern-recognition-arc-style)
+- [Key Learnings from Implementation](#key-learnings-from-implementation)
+
+### 🔍 Deep Dives
+- [ARC Agent Architecture](#-deep-dive-arc-agent-architecture)
+- [Observability with Logfire](#-observability-with-logfire)
+
+### 🛠️ Development
+- [Building Your Own Agent](#-building-your-own-agent)
+- [Key Learnings](#-key-learnings)
+- [What's Next](#-whats-next)
+- [Contributing](#-contributing)
+
+### 📚 Documentation
+- [Technical Documentation](technical_docs/README.md)
+- [Architecture Guides](technical_docs/architecture/)
+- [Sequence Diagrams](technical_docs/sequence-diagrams/)
+- [Implementation Guides](technical_docs/implementation/)
+
+### ⚡ Quick Reference for Developers
+```bash
+# Run agents
+python src/01_weather_agent.py          # Weather queries
+python src/04_general_chat_agent.py     # Interactive chat
+python src/10_frozen_lake_agent.py      # Navigation game
+python src/14_simple_arc_agent.py       # Visual reasoning
+
+# Grid game patterns
+python src/012_frozen_lake_coordinate_approach.py  # Navigation pattern
+python src/07_LMGAME_agent.py                      # Puzzle solving pattern
+
+# Reinforcement learning
+python rl-games/frozen_lake_dqn.py      # DQN implementation
+```
+
 ## 🎯 What We're Building
 
 This repository showcases the evolution of AI agents - from simple weather queries to complex reasoning systems that can solve ARC (Abstraction and Reasoning Corpus) challenges. Each agent demonstrates different aspects of intelligent behavior and provides reusable patterns for building your own AI systems.
@@ -22,7 +72,39 @@ pip install -r requirements.txt
 cp .env.example .env  # Add your API keys
 ```
 
+## 📁 Project Structure
+
+```
+small-agents/
+├── src/                          # Main agent implementations
+│   ├── 01_weather_agent.py      # Weather data integration
+│   ├── 04_general_chat_agent.py # Conversational AI
+│   ├── 10_frozen_lake_agent.py  # Navigation game
+│   ├── 14_simple_arc_agent.py   # Visual reasoning
+│   └── 07_LMGAME_agent.py       # Puzzle solving
+├── rl-games/                     # Reinforcement learning
+│   ├── frozen_lake_dqn.py       # Deep Q-Network
+│   └── frozen_lake_qtable.py    # Q-Learning
+├── technical_docs/               # Architecture & design docs
+│   ├── architecture/            # System design patterns
+│   ├── sequence-diagrams/       # Flow diagrams
+│   └── implementation/          # Development guides
+├── prompts/                      # Prompt management
+└── requirements.txt             # Dependencies
+```
+
 ## 🤖 Agent Showcase
+
+### Agent Types Overview
+
+| Agent Type | Best For | Complexity | Example |
+|------------|----------|------------|---------|
+| **Data Integration** | External APIs, real-time data | Low | Weather Agent |
+| **Conversational** | Chat, memory, multi-turn | Medium | General Chat Agent |
+| **Navigation** | Pathfinding, obstacle avoidance | Medium | Frozen Lake Agent |
+| **Puzzle Solving** | Logic games, state transformation | High | Sokoban Agent |
+| **Visual Reasoning** | Pattern recognition, transformations | High | ARC Agent |
+| **Reinforcement Learning** | Learning from experience | High | DQN Agent |
 
 ### 1. **Weather Agent** - Real-world Data Integration
 *"How's the weather in Tokyo?"*
@@ -78,48 +160,133 @@ Our most advanced agent tackles the Abstraction and Reasoning Corpus:
 python src/14_simple_arc_agent.py
 ```
 
-## 🎮 The Generic Agentic Pattern for Grid Games
+## 🎮 Grid Game Patterns: From Navigation to Puzzle Solving
 
-After building multiple agents, we've identified a powerful pattern for solving grid-based problems. Here's the framework:
+After building multiple grid-based agents, we've identified **three powerful patterns** that can be applied across different domains:
 
-### Core Components
+### Pattern Comparison
+
+| Aspect | Navigation | Puzzle Solving | Visual Reasoning |
+|--------|------------|----------------|------------------|
+| **Primary Goal** | Reach destination | Transform state | Find patterns |
+| **Key Tools** | Position tracking | State validation | Pattern analysis |
+| **Complexity** | Medium | High | High |
+| **Examples** | Frozen Lake | Sokoban | ARC challenges |
+| **Success Metric** | Goal reached | Puzzle solved | Pattern matched |
+
+### Pattern 1: Navigation & Pathfinding (Frozen Lake Style)
+
+**Best for**: Navigation games, pathfinding, exploration problems
 
 ```python
-# 1. Grid Analysis Tools
+# Core Components
+@agent.tool
+async def find_player_position(ctx: RunContext, grid: List[List[str]]) -> tuple:
+    """Locate the player/agent in the grid"""
+    
+@agent.tool  
+async def find_goal_position(ctx: RunContext, grid: List[List[str]]) -> tuple:
+    """Find the target destination"""
+    
+@agent.tool
+async def validate_move(ctx: RunContext, from_pos: tuple, action: str) -> MoveValidation:
+    """Check if a move is valid and safe"""
+    
+@agent.tool
+async def move_player_agent(ctx: RunContext, grid: List[List[str]], action: str) -> List[List[str]]:
+    """Execute the move and update grid state"""
+```
+
+**The Navigation Loop**:
+1. **Locate** → Find current position and goal
+2. **Plan** → Determine safe path avoiding obstacles
+3. **Validate** → Check if move is legal
+4. **Execute** → Move and update state
+5. **Repeat** → Continue until goal reached
+
+### Pattern 2: Puzzle Solving & State Transformation (Sokoban Style)
+
+**Best for**: Logic puzzles, state-based games, transformation problems
+
+```python
+# Core Components
+@agent.tool
+async def analyze_grid_state(ctx: RunContext, grid: List[List[str]]) -> GridAnalysis:
+    """Understand current state and identify key elements"""
+    
+@agent.tool
+async def valid_action(ctx: RunContext, action: Action) -> str:
+    """Check if action follows game rules"""
+    
+@agent.tool
+async def update_grid(ctx: RunContext, grid: List[List[str]], action: Action) -> List[List[str]]:
+    """Apply action and transform grid state"""
+    
+@agent.tool
+async def get_reward(ctx: RunContext, state: str, action: Action) -> float:
+    """Calculate reward for action to guide learning"""
+    
+@agent.tool
+async def verify_solution(ctx: RunContext) -> str:
+    """Check if puzzle is solved"""
+```
+
+**The Puzzle Solving Loop**:
+1. **Analyze** → Understand current state and constraints
+2. **Hypothesize** → Propose valid actions
+3. **Transform** → Apply action and update state
+4. **Evaluate** → Calculate reward and check progress
+5. **Iterate** → Continue until puzzle solved
+
+### Pattern 3: Visual Reasoning & Pattern Recognition (ARC Style)
+
+**Best for**: Visual puzzles, pattern matching, abstract reasoning
+
+```python
+# Core Components
 @agent.tool
 async def analyze_grid(ctx: RunContext, grid: List[List[int]], name: str = "grid") -> GridAnalysis:
     """Understand the structure and patterns in a grid"""
-    # Analyze shape, values, patterns
-    # Return structured analysis
-
-# 2. Transformation Tools  
+    
 @agent.tool
 async def apply_transformation(ctx: RunContext, grid: List[List[int]], operation: str, **params) -> List[List[int]]:
     """Apply geometric or value transformations"""
-    # Execute operations like rotate, flip, replace
-    # Return transformed grid
-
-# 3. Validation Tools
+    
 @agent.tool
 async def compare_grids(ctx: RunContext, grid1: List[List[int]], grid2: List[List[int]]) -> bool:
     """Compare grids and validate solutions"""
-    # Check if transformation produces expected result
 ```
 
-### The Reasoning Loop
-
+**The Reasoning Loop**:
 1. **Analyze** → Understand the current state
 2. **Hypothesize** → Propose transformations
 3. **Apply** → Execute the transformation
 4. **Validate** → Check if result matches expectation
 5. **Iterate** → Repeat until solution found
 
-### Why This Pattern Works
+### Why These Patterns Work
 
 - **Modular**: Each tool has a single responsibility
 - **Composable**: Tools can be combined in any order
 - **Observable**: Every step is logged and traceable
 - **Extensible**: Easy to add new operations or analysis types
+- **Domain-Specific**: Each pattern is optimized for its problem type
+
+### Key Learnings from Implementation
+
+#### From Frozen Lake Agents
+- **Position Tracking**: Always maintain clear coordinate systems (1-based vs 0-based)
+- **Boundary Validation**: Check bounds before every move to prevent crashes
+- **State Visualization**: Pretty-print grids for debugging and agent understanding
+- **Reward Shaping**: Use meaningful rewards (-1000 for holes, +100 for goal) to guide learning
+- **Conversation Memory**: Maintain conversation history for multi-step reasoning
+
+#### From LMGAME (Sokoban) Agent
+- **State Transformation**: Deep copy grids to avoid mutation issues
+- **Complex Rule Validation**: Handle edge cases like box pushing and wall collisions
+- **Reward Calculation**: Dynamic reward systems that consider progress and deadlocks
+- **Restart Mechanisms**: Ability to reset to original state when stuck
+- **Prompt Versioning**: Use different prompt versions for different puzzle complexities
 
 ## 🔍 Deep Dive: ARC Agent Architecture
 
@@ -175,6 +342,24 @@ with logfire.span("analyze_grid") as span:
 - User interaction flows
 
 ## 🛠️ Building Your Own Agent
+
+### 🎯 Which Agent Should You Start With?
+
+**Beginner** → Start with Weather Agent or General Chat Agent
+- Learn basic tool integration and conversation flow
+- Understand Pydantic-AI fundamentals
+
+**Intermediate** → Try Frozen Lake or Navigation patterns
+- Master grid-based reasoning
+- Learn position tracking and validation
+
+**Advanced** → Explore Puzzle Solving or Visual Reasoning
+- Complex state transformations
+- Pattern recognition and confidence scoring
+
+**Expert** → Dive into Reinforcement Learning
+- Neural networks and experience replay
+- Advanced learning algorithms
 
 ### Step 1: Define Your Tools
 ```python
@@ -241,6 +426,8 @@ We're exploring:
 - **Learning from feedback** - Improving based on user corrections
 - **Visual reasoning** - Processing images and diagrams
 - **Planning and execution** - Breaking complex tasks into steps
+- **Hybrid patterns** - Combining navigation, puzzle solving, and visual reasoning
+- **Real-time adaptation** - Dynamic pattern switching based on problem complexity
 
 ## 🤝 Contributing
 

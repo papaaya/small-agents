@@ -1,7 +1,24 @@
 # Grid Game Framework Architecture
 
 ## Overview
-The Grid Game Framework is a generic pattern for solving grid-based problems using AI agents. This framework provides a reusable architecture that can be applied to various domains including visual reasoning, game playing, and spatial analysis.
+The Grid Game Framework provides **three distinct patterns** for solving grid-based problems using AI agents. Each pattern is optimized for different types of problems and can be applied across various domains including navigation, puzzle solving, and visual reasoning.
+
+## Pattern Classification
+
+### 1. Navigation & Pathfinding Pattern
+**Domain**: Navigation games, pathfinding, exploration problems  
+**Examples**: Frozen Lake, Maze navigation, Robot pathfinding  
+**Key Focus**: Position tracking, obstacle avoidance, goal reaching
+
+### 2. Puzzle Solving & State Transformation Pattern  
+**Domain**: Logic puzzles, state-based games, transformation problems  
+**Examples**: Sokoban, Sliding puzzles, State machines  
+**Key Focus**: Rule validation, state transformation, progress tracking
+
+### 3. Visual Reasoning & Pattern Recognition Pattern
+**Domain**: Visual puzzles, pattern matching, abstract reasoning  
+**Examples**: ARC challenges, Image transformations, Pattern completion  
+**Key Focus**: Pattern analysis, geometric transformations, validation
 
 ## Core Architecture
 
@@ -49,6 +66,85 @@ graph TB
     R --> S
     R --> C
 ```
+
+## Pattern-Specific Architectures
+
+### Pattern 1: Navigation & Pathfinding
+
+```mermaid
+graph TB
+    subgraph "Navigation Flow"
+        NP[Find Player Position]
+        NG[Find Goal Position]
+        VM[Validate Move]
+        MP[Move Player]
+        CS[Check Success]
+    end
+    
+    NP --> VM
+    NG --> VM
+    VM --> MP
+    MP --> CS
+    CS --> NP
+```
+
+**Key Components**:
+- **Position Tracking**: Maintain current agent position
+- **Goal Detection**: Identify target destination
+- **Path Validation**: Check move legality and safety
+- **State Update**: Execute moves and update grid
+- **Success Detection**: Determine if goal reached
+
+### Pattern 2: Puzzle Solving & State Transformation
+
+```mermaid
+graph TB
+    subgraph "Puzzle Flow"
+        AS[Analyze State]
+        VA[Validate Action]
+        UG[Update Grid]
+        GR[Get Reward]
+        VS[Verify Solution]
+    end
+    
+    AS --> VA
+    VA --> UG
+    UG --> GR
+    GR --> VS
+    VS --> AS
+```
+
+**Key Components**:
+- **State Analysis**: Understand current puzzle state
+- **Rule Validation**: Check action compliance with game rules
+- **State Transformation**: Apply actions and update grid
+- **Reward Calculation**: Evaluate action quality and progress
+- **Solution Verification**: Check if puzzle is solved
+
+### Pattern 3: Visual Reasoning & Pattern Recognition
+
+```mermaid
+graph TB
+    subgraph "Reasoning Flow"
+        GA[Grid Analysis]
+        PH[Pattern Hypothesis]
+        AT[Apply Transformation]
+        CV[Compare Validation]
+        CS[Confidence Scoring]
+    end
+    
+    GA --> PH
+    PH --> AT
+    AT --> CV
+    CV --> CS
+    CS --> GA
+```
+
+**Key Components**:
+- **Pattern Analysis**: Identify geometric and value patterns
+- **Transformation DSL**: Apply geometric operations
+- **Validation Engine**: Compare results with expectations
+- **Confidence Scoring**: Assess solution reliability
 
 ## Component Details
 
@@ -245,6 +341,129 @@ def calculate_confidence(self, solution: GridSolution) -> float:
     
     return max(0.0, min(1.0, confidence))
 ```
+
+## Implementation Examples & Learnings
+
+### Frozen Lake Navigation Pattern
+
+**Key Implementation Details**:
+```python
+# Position tracking with coordinate systems
+@agent.tool
+async def find_player_position(ctx: RunContext, grid: List[List[str]]) -> tuple:
+    """Find player position (P) in the grid"""
+    for i, row in enumerate(grid):
+        for j, cell in enumerate(row):
+            if cell == 'P':
+                return (i, j)
+    return None
+
+# Boundary validation
+@agent.tool
+async def validate_move(ctx: RunContext, from_pos: tuple, action: str) -> MoveValidation:
+    """Check if move is valid and safe"""
+    new_x, new_y = calculate_new_position(from_pos, action)
+    
+    # Check bounds
+    if new_x < 0 or new_x >= grid_size or new_y < 0 or new_y >= grid_size:
+        return MoveValidation(valid=False, reason="Out of bounds")
+    
+    # Check for obstacles
+    if grid[new_x][new_y] == 'H':  # Hole
+        return MoveValidation(valid=False, reason="Hole detected")
+    
+    return MoveValidation(valid=True, new_position=(new_x, new_y))
+```
+
+**Key Learnings**:
+- **Coordinate Consistency**: Always specify 1-based vs 0-based indexing
+- **Boundary Checking**: Validate moves before execution
+- **State Visualization**: Pretty-print grids for debugging
+- **Reward Shaping**: Use meaningful rewards (-1000 for holes, +100 for goal)
+
+### Sokoban Puzzle Solving Pattern
+
+**Key Implementation Details**:
+```python
+# State transformation with deep copying
+@agent.tool
+async def update_grid(ctx: RunContext, grid: List[List[str]], action: Action) -> List[List[str]]:
+    """Update grid based on valid action"""
+    # Create deep copy to avoid mutation
+    new_grid = [row[:] for row in grid]
+    
+    # Calculate new positions
+    new_player_pos = calculate_new_position(player_pos, action)
+    
+    # Handle complex interactions (box pushing)
+    if new_grid[new_player_pos[0]][new_player_pos[1]] in ['X', '√']:
+        box_new_pos = calculate_box_new_position(new_player_pos, action)
+        # Validate box movement
+        if not is_valid_box_move(box_new_pos, new_grid):
+            return grid  # Return unchanged grid
+    
+    # Update grid state
+    update_player_position(new_grid, new_player_pos)
+    return new_grid
+
+# Dynamic reward calculation
+@agent.tool
+async def get_reward(ctx: RunContext, state: str, action: Action) -> float:
+    """Calculate reward considering progress and deadlocks"""
+    reward = 0.0
+    
+    # Progress reward
+    boxes_on_targets = count_boxes_on_targets(state)
+    reward += boxes_on_targets * 10.0
+    
+    # Deadlock penalty
+    if is_deadlock_position(state):
+        reward -= 20.0
+    
+    # Move penalty
+    reward -= 1.0
+    
+    return reward
+```
+
+**Key Learnings**:
+- **State Immutability**: Use deep copies to prevent side effects
+- **Complex Rule Validation**: Handle edge cases like box pushing
+- **Dynamic Rewards**: Consider progress, deadlocks, and efficiency
+- **Restart Mechanisms**: Reset to original state when stuck
+- **Prompt Versioning**: Use different prompts for different complexities
+
+### ARC Visual Reasoning Pattern
+
+**Key Implementation Details**:
+```python
+# Pattern analysis with structured output
+@agent.tool
+async def analyze_grid(ctx: RunContext, grid: List[List[int]], name: str = "grid") -> GridAnalysis:
+    """Analyze grid structure and patterns"""
+    return GridAnalysis(
+        grid_shape=[len(grid), len(grid[0])],
+        unique_values=list(set(val for row in grid for val in row)),
+        value_counts=count_values(grid),
+        pattern_description=describe_patterns(grid)
+    )
+
+# Transformation DSL
+@agent.tool
+async def apply_transformation(ctx: RunContext, grid: List[List[int]], operation: str, **params) -> List[List[int]]:
+    """Apply geometric or value transformations"""
+    if operation == "rotate_90":
+        return np.rot90(grid, k=1).tolist()
+    elif operation == "replace_values":
+        return np.where(grid == params["old_value"], params["new_value"], grid).tolist()
+    # ... more operations
+```
+
+**Key Learnings**:
+- **Structured Analysis**: Return comprehensive grid analysis
+- **Transformation DSL**: Provide reusable geometric operations
+- **Confidence Scoring**: Self-assess solution reliability
+- **Multi-example Learning**: Use training examples to generalize
 
 ## Extensibility Patterns
 
