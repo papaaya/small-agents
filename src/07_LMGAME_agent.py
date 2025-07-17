@@ -9,7 +9,7 @@ The meaning of each symbol in the state is:
 #: wall, _: empty, O: target, √: box on target, X: box, P: player, S: player on target
 Your available actions are:
 Up, Down, Left, Right
-You can make up to 10 actions, separated by the action separator “ || ”
+You can make up to 10 actions, separated by the action separator " || "
 Turn 1:
 State:
 ######
@@ -59,7 +59,7 @@ from enum import Enum
 
 import asyncio
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Tuple
 from openai.types.shared import responses_model
 from pydantic_ai import Agent, RunContext, ModelRetry
 from pydantic import BaseModel, Field
@@ -71,19 +71,22 @@ from pydantic_ai.models.openai import OpenAIResponsesModel, OpenAIResponsesModel
 from openai.types.responses import WebSearchToolParam  
 import dotenv
 
+# Import the prompt manager
+from prompt_manager import PromptManager
+
 dotenv.load_dotenv()
 
 logfire.configure(send_to_logfire='if-token-present')
 logfire.instrument_pydantic_ai()
 
 model_settings = OpenAIResponsesModelSettings(
-    openai_builtin_tools=[WebSearchToolParam(type='web_search_preview')],
+    openai_reasoning_effort='low',
+    openai_reasoning_summary='detailed',
 )
-model = OpenAIResponsesModel('gpt-4o')
+model = OpenAIResponsesModel('o3-mini')
 
-
-
-
+# Initialize prompt manager
+prompt_manager = PromptManager()
 
 def print_grid(grid: List[List[str]], title: str = "Sokoban Grid") -> None:
     """
@@ -112,80 +115,28 @@ class Action(str, Enum):
     RIGHT = "Right"
 
 
-
-class SokobanResponse(BaseModel):
-    """Response model for the Sokoban agent"""
-    think: str = Field(description="Agent's thinking process about the game state and strategy")
-    answer: Action = Field(description="Only one of the following actions: Up, Down, Left, Right")
-
 class GameResult(str, Enum):
     """Result of the game"""
     WIN = "Win"
     LOSE = "Lose"
 
+prompt_version = "v5"
+system_prompt = prompt_manager.get_prompt(prompt_version)
+prompt_info = prompt_manager.get_prompt_info(prompt_version)
+
+print(f"🤖 Creating agent with prompt version: {prompt_version or 'default'}")
+print(f"   Name: {prompt_info.get('name', 'Unknown')}")
+print(f"   Description: {prompt_info.get('description', 'No description')}")
 
 agent = Agent(model=model, 
-                model_settings=model_settings,
-                system_prompt="""
-                You are solving the Sokoban puzzle. You are the player and you need to push all boxes to
-                targets. When you are right next to a box, you can push it by moving in the same direction.
-                You cannot push a box through a wall, and you cannot pull a box. 
-
-                When asked to continue the solving puzzle, you should look at the last updated state and the action you took.
-
-                
-                Symbols in the state:
-                - P: player (you)
-                - X: box (needs to be pushed to target)
-                - O: target (where boxes should go)
-                - √: box on target (solved)
-                - S: player on target
-                - #: wall (cannot move through)
-                - _: empty space, Where P and X can move through    
-                - √: box on target (solved) 
-                
-                Your available actions are EXACTLY: Up, Down, Left, Right
-                You must select any one action.
-                
-                You can make up to 1000 actions
-                Always output: <think> [Your thoughts about game and state] </think>
-                Solving strategies:
-                Simple:
-                - Find the box that is closest to the target.
-                - Push the box to the target.
-                - Repeat until all boxes are on targets.
-                - If you are stuck, try to find a new path.
-                - If you are stuck, try to find a new path.
-                - reflect on the action you took and the state you are in.
-                - lets think step by step.
-                
-
-                You need to check if the action is valid. Below are some invalid actions:
-                P does not move through walls (#).
-                X does not move through walls (#).
-                O does not move through walls (#).
-                # does not move through walls (#).
-                
-                Below are some valid actions:
-                P can move through empty spaces (_).
-                X can move through empty spaces (_).
-                O can move through empty spaces (_).
-                # can move through empty spaces (_).
-                P can move through targets (O).
-                X can move through targets (O).
-                When P is next to a box, P can push the box in the same direction as P moves.
-
-                You must use the verify_solution tool to verify your answer.
-                You must use the valid_action tool to check if the action is valid.
-                you must use the update_grid tool to update the grid based on the action.
-                After updating the grid, you must use the verify_solution tool to verify if the solution is correct.
-                if Not correct, you should proceed to the next action. and try to solve the puzzle.
-            """,
+            model_settings=model_settings,
+            system_prompt=system_prompt,
             output_type=GameResult)
 
 
 @agent.tool
 async def valid_action(ctx: RunContext, action: Action) -> str:
+    print(f"🔍 VALID_ACTION called with action: {action}")
     """Check if the action is valid"""
     print(f"Checking if action {action} is valid")
     valid_action_agent = Agent(model=model, 
@@ -213,7 +164,13 @@ async def valid_action(ctx: RunContext, action: Action) -> str:
     return str(result)
 
 @agent.tool
-async def update_grid(ctx: RunContext, grid: List[List[str]], action: Action, player_position: List[int], box_position: List[int], target_position: List[int]) -> List[List[str]] | str:
+async def update_grid(ctx: RunContext, grid: List[List[str]], action: Action, player_position: List[int], box_position: List[int], target_position: List[int], think: str) -> Tuple[List[List[str]], str]:
+    """
+    Update the grid based on the valid action and return the new grid and the thought process in think variable.
+    """
+    print(f"🔄 UPDATE_GRID called with action: {action}")
+    print("📋 Current grid state:")
+    print_grid(grid, "Before Update")
     """Update the grid based on the valid action"""
     print(f"Updating grid based on action {action}")
     
@@ -223,7 +180,7 @@ async def update_grid(ctx: RunContext, grid: List[List[str]], action: Action, pl
     if not player_position or len(player_position) != 2:
         error_msg = "Error: Invalid player position format"
         print(error_msg)
-        return error_msg
+        return grid, error_msg
     
     player_row, player_col = player_position[0], player_position[1]
     
@@ -244,13 +201,13 @@ async def update_grid(ctx: RunContext, grid: List[List[str]], action: Action, pl
         new_player_col < 0 or new_player_col >= len(new_grid[0])):
         error_msg = f"Error: Action {action} would move player out of bounds"
         print(error_msg)
-        return error_msg
+        return grid, error_msg
     
     # Edge case 2: Check if new position is a wall
     if new_grid[new_player_row][new_player_col] == '#':
         error_msg = f"Error: Action {action} would move player into a wall"
         print(error_msg)
-        return error_msg
+        return grid, error_msg
     
     # Edge case 3: Check if moving a box
     if new_grid[new_player_row][new_player_col] in ['X', '√']:
@@ -263,13 +220,13 @@ async def update_grid(ctx: RunContext, grid: List[List[str]], action: Action, pl
             box_new_col < 0 or box_new_col >= len(new_grid[0])):
             error_msg = f"Error: Action {action} would push box out of bounds"
             print(error_msg)
-            return error_msg
+            return grid, error_msg
         
         # Edge case 5: Check if box would be pushed into a wall or another box
         if new_grid[box_new_row][box_new_col] in ['#', 'X', '√']:
             error_msg = f"Error: Action {action} would push box into obstacle"
             print(error_msg)
-            return error_msg
+            return grid, error_msg
         
         # Move the box
         old_box_char = new_grid[new_player_row][new_player_col]
@@ -302,7 +259,7 @@ async def update_grid(ctx: RunContext, grid: List[List[str]], action: Action, pl
     success_msg = f"Successfully moved player from ({player_row}, {player_col}) to ({new_player_row}, {new_player_col})"
     print(success_msg)
     print_grid(new_grid)
-    return new_grid
+    return new_grid, think
     
 
 
@@ -353,9 +310,87 @@ async def grid_to_string_state(ctx: RunContext, grid: List[List[str]]) -> str:
 
 @agent.tool
 async def get_reward(ctx: RunContext, state: str, action: Action) -> float:
-    """Get the reward for the action, given the state"""
-
-    return -1.0
+    print(f"💰 GET_REWARD called with action: {action}")
+    """
+    Get the reward for the action, given the state.
+    Provides meaningful signals to guide the agent's learning.
+    
+    Args:
+        state: Current game state as string
+        action: Action taken
+        
+    Returns:
+        Reward value (positive for good actions, negative for bad actions)
+    """
+    # Convert state string to grid for analysis
+    lines = [line.strip() for line in state.strip().split('\n') if line.strip()]
+    grid = [list(line) for line in lines]
+    
+    reward = 0.0
+    
+    # Count current state metrics
+    boxes_on_targets = sum(1 for row in grid for cell in row if cell == '√')
+    total_boxes = sum(1 for row in grid for cell in row if cell in ['X', '√'])
+    total_targets = sum(1 for row in grid for cell in row if cell in ['O', '√'])
+    
+    # Base reward for progress
+    if boxes_on_targets > 0:
+        reward += boxes_on_targets * 10.0  # +10 for each box on target
+    
+    # Check if puzzle is solved
+    if boxes_on_targets == total_targets and total_targets > 0:
+        reward += 100.0  # Big bonus for solving the puzzle
+    
+    # Penalty for invalid moves (would be caught by valid_action tool)
+    # This is more of a safety net
+    
+    # Small penalty for each move to encourage efficiency
+    reward -= 1.0
+    
+    # Bonus for moving towards targets
+    # Find player position
+    player_pos = None
+    for i, row in enumerate(grid):
+        for j, cell in enumerate(row):
+            if cell in ['P', 'S']:
+                player_pos = (i, j)
+                break
+        if player_pos:
+            break
+    
+    if player_pos:
+        # Check if player is near a box that can be pushed to target
+        row, col = player_pos
+        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:  # Check adjacent positions
+            new_row, new_col = row + dr, col + dc
+            if (0 <= new_row < len(grid) and 0 <= new_col < len(grid[0]) and 
+                grid[new_row][new_col] == 'X'):
+                # Check if pushing this box would move it towards a target
+                box_new_row, box_new_col = new_row + dr, new_col + dc
+                if (0 <= box_new_row < len(grid) and 0 <= box_new_col < len(grid[0]) and 
+                    grid[box_new_row][box_new_col] == 'O'):
+                    reward += 5.0  # Bonus for being in position to push box to target
+    
+    # Penalty for potential deadlocks
+    for i, row in enumerate(grid):
+        for j, cell in enumerate(row):
+            if cell == 'X':
+                # Check if box is in corner
+                if ((i == 0 or i == len(grid) - 1) and 
+                    (j == 0 or j == len(grid[0]) - 1)):
+                    reward -= 20.0  # Heavy penalty for corner deadlock
+                
+                # Check if box is against wall with no escape
+                elif ((i == 0 or i == len(grid) - 1) and 
+                      (j > 0 and j < len(grid[0]) - 1) and
+                      grid[i][j-1] == '#' and grid[i][j+1] == '#'):
+                    reward -= 15.0  # Penalty for wall deadlock
+                elif ((j == 0 or j == len(grid[0]) - 1) and 
+                      (i > 0 and i < len(grid) - 1) and
+                      grid[i-1][j] == '#' and grid[i+1][j] == '#'):
+                    reward -= 15.0  # Penalty for wall deadlock
+    
+    return reward
 
 @agent.tool
 async def verify_solution(ctx: RunContext) -> str:
@@ -375,6 +410,119 @@ async def verify_solution(ctx: RunContext) -> str:
     result = await verification_agent.run("True or False")
     print(f"Verification result: {result}")
     return str(result)
+
+@agent.tool
+async def restart_puzzle(ctx: RunContext, original_state: str) -> str:
+    """
+    Restart the puzzle from the original state
+    
+    Args:
+        original_state: The original puzzle state to restart from
+        
+    Returns:
+        Confirmation message
+    """
+    print("🔄 RESTARTING PUZZLE - Returning to original state")
+    print("Original state:")
+    print(original_state)
+    return f"Puzzle restarted. Original state restored with {original_state.count('X')} boxes and {original_state.count('O')} targets."
+
+
+
+
+async def solve_puzzle_with_prompt_version(puzzle_state: str, prompt_version: str = "v2", max_iterations: int = 50) -> dict:
+    """
+    Solve a Sokoban puzzle using a specific prompt version
+    
+    Args:
+        puzzle_state: The initial puzzle state as a string
+        prompt_version: Version of the prompt to use
+        max_iterations: Maximum number of iterations to try
+        
+    Returns:
+        Dictionary with results
+    """
+    print(f"🧩 Solving puzzle with prompt version: {prompt_version}")
+    print("=" * 60)
+    
+    # Create agent with specific prompt version
+    conversation_messages = None
+    failure_count = 0
+    restart_count = 0
+    max_restarts = 3
+    
+    # Initialize current state
+    current_state = puzzle_state
+    print("📋 Initial State:")
+    print_grid([list(line) for line in puzzle_state.strip().split('\n') if line.strip()], "Initial Grid")
+    
+    for iteration in range(max_iterations):
+        try:
+            print(f"\n🔄 Iteration {iteration + 1}")
+            print("-" * 40)
+            
+            if conversation_messages is None:
+                result = await agent.run(current_state)
+            else:
+                result = await agent.run("Continue solving the puzzle", message_history=conversation_messages)
+            
+            print(f"🤔 Agent thinking: {result.output}")
+            
+            # Calculate current reward manually
+            lines = [line.strip() for line in current_state.strip().split('\n') if line.strip()]
+            grid = [list(line) for line in lines]
+            boxes_on_targets = sum(1 for row in grid for cell in row if cell == '√')
+            total_targets = sum(1 for row in grid for cell in row if cell in ['O', '√'])
+            
+            # Simple reward calculation
+            reward = boxes_on_targets * 10.0 - 1.0  # +10 per box on target, -1 for move
+            if boxes_on_targets == total_targets and total_targets > 0:
+                reward += 100.0  # Bonus for solving
+            
+            print(f"💰 Current reward: {reward}")
+            print(f"📊 Progress: {boxes_on_targets}/{total_targets} boxes on targets")
+            
+            # Show current grid state
+            print_grid(grid, f"Grid after iteration {iteration + 1}")
+            
+            if boxes_on_targets == total_targets and total_targets > 0:
+                print("🎉 PUZZLE SOLVED!")
+                print_grid(grid, "Final Solved Grid")
+                break
+            
+            conversation_messages = result.all_messages()
+            failure_count = 0  # Reset failure count on success
+            
+        except Exception as e:
+            failure_count += 1
+            print(f"❌ Error in iteration {iteration + 1}: {e}")
+            
+            # Check if we should restart
+            if restart_count < max_restarts and failure_count >= 3:
+                print(f"🔄 Attempting restart {restart_count + 1}/{max_restarts}")
+                restart_count += 1
+                conversation_messages = None  # Reset conversation
+                failure_count = 0
+                current_state = puzzle_state  # Reset to original state
+                print("📋 Restarted to original state:")
+                print_grid([list(line) for line in puzzle_state.strip().split('\n') if line.strip()], "Restarted Grid")
+                continue
+            
+            # # Check if we should switch prompt version
+            # new_version = prompt_manager.switch_prompt_version(prompt_version, failure_count)
+            # if new_version != prompt_version:
+            #     print(f"🔄 Switching to prompt version: {new_version}")
+            #     prompt_version = new_version
+            #     current_agent = create_agent(prompt_version)
+            #     conversation_messages = None  # Reset conversation
+            #     failure_count = 0
+    
+    return {
+        "prompt_version_used": prompt_version,
+        "iterations": iteration + 1,
+        "restarts": restart_count,
+        "final_result": result.output if 'result' in locals() else "Failed"
+    }
 
 
 
@@ -399,26 +547,13 @@ async def main():
 #____#
 ######"""
 
-        print("Sending state to agent:")
-        print(state)
-        print("\nWaiting for agent response...")
-        for i in range(100):
-            try:
-                if conversation_messages is None:
-                    result = await agent.run(state)
-                else:
-                    result = await agent.run("lets continue the solving puzzle", message_history=conversation_messages)
-
-                print("\nAgent Response:")
-                print(result)                
-
-                conversation_messages = result.all_messages()
-
-                    
-            except Exception as e:
-                print(f"Error: {e}")
-                import traceback
-                traceback.print_exc()
+        print("🎮 Sokoban Agent Test")
+        print("=" * 80)
+        
+        # Test the original solve function with grid updates
+        print("Testing with grid visualization and reward tool...")
+        result = await solve_puzzle_with_prompt_version(state, prompt_version, max_iterations=10)
+        print(f"\n✅ Final result: {result}")
 
 
 if __name__ == "__main__":
