@@ -1,354 +1,265 @@
-# Small Agents
+# Small Agents: Building Intelligent AI Agents with Pydantic-AI
 
-A collection of AI agents built with `pydantic_ai` framework, demonstrating various capabilities from weather forecasting to interactive chat.
+> *A journey into creating intelligent agents that can solve complex problems, play games, and reason about the world around them.*
+
+## 🎯 What We're Building
+
+This repository showcases the evolution of AI agents - from simple weather queries to complex reasoning systems that can solve ARC (Abstraction and Reasoning Corpus) challenges. Each agent demonstrates different aspects of intelligent behavior and provides reusable patterns for building your own AI systems.
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Python 3.8+
-- Virtual environment (recommended)
-
-### Installation
 ```bash
-# Clone the repository
+# Clone and setup
 git clone <repository-url>
 cd small-agents
-
-# Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
-pip install pydantic-ai logfire httpx python-dotenv devtools
+pip install -r requirements.txt
+
+# Set up your environment
+cp .env.example .env  # Add your API keys
 ```
 
-### Environment Setup
-Create a `.env` file in the root directory:
-```env
-# Optional: For weather agent
-WEATHER_API_KEY=your_tomorrow_io_api_key
-GEO_API_KEY=your_geocode_api_key
+## 🤖 Agent Showcase
 
-# Optional: For logfire monitoring
-LOGFIRE_TOKEN=your_logfire_token
+### 1. **Weather Agent** - Real-world Data Integration
+*"How's the weather in Tokyo?"*
+
+Our first agent demonstrates how to integrate external APIs and provide real-time information. It shows the pattern of:
+- Tool-based data fetching
+- Error handling and retries
+- Structured output validation
+
+```bash
+python src/01_weather_agent.py
 ```
 
-## 🤖 Agents Overview
+### 2. **General Chat Agent** - Conversational Intelligence ⭐
+*"Let's have a meaningful conversation"*
 
-### 1. Weather Agent (`src/01_weather_agent.py`)
-- **Purpose**: Get real-time weather information for multiple locations
-- **Features**: 
-  - Geocoding support
-  - Multi-location weather data
-  - Trip planning with weather insights
-- **Usage**: `python src/01_weather_agent.py`
-
-### 2. Research Agent (`src/02_research_agent.py`)
-- **Purpose**: Research and information gathering
-- **Status**: In development
-
-### 3. Tic Tac Toe Agent (`src/03_tick_tock_agent.py`)
-- **Purpose**: Play Tic Tac Toe with AI
-- **Features**: Two-player game simulation
-- **Usage**: `python src/03_tick_tock_agent.py`
-
-### 4. General Chat Agent (`src/04_general_chat_agent.py`) ⭐
-- **Purpose**: Interactive conversational AI assistant
-- **Features**:
-  - Casual conversations
-  - User information memory
-  - Mathematical calculations
-  - Current time queries
-  - Step-by-step problem solving
-- **Usage**: 
-  ```bash
-  # Demo mode
-  python src/04_general_chat_agent.py
-  
-  # Interactive mode
-  python src/04_general_chat_agent.py --interactive
-  ```
-
-### 5. Reinforcement Learning - Frozen Lake DQN (`rl-games/frozen_lake_dqn.py`)
-- **Purpose**: Deep Q-Network implementation for the Frozen Lake environment
-- **Features**:
-  - Neural network-based Q-learning
-  - Experience replay buffer
-  - Target network for stability
-  - Epsilon-greedy exploration strategy
-- **Usage**: `python rl-games/frozen_lake_dqn.py`
-
-## 🧠 Reinforcement Learning - Frozen Lake DQN Algorithm
-
-### Deep Q-Network (DQN) Algorithm Steps
-
-The Frozen Lake DQN implementation demonstrates a complete reinforcement learning solution using neural networks to learn optimal navigation policies.
-
-#### **Step 1: Environment Setup**
-- Create a 4x4 Frozen Lake grid where the agent (S) must navigate from start to goal (G)
-- States: 16 possible positions (0-15), Actions: 4 directions (Left, Down, Right, Up)
-- Rewards: +1 for reaching goal, 0 for falling in holes or other actions
-
-#### **Step 2: Neural Network Architecture**
-- **Policy Network**: Takes current state as input, outputs Q-values for all 4 actions
-- **Target Network**: Copy of policy network (updated less frequently for stability)
-- Architecture: Input layer (16 nodes) → Hidden layer (16 nodes, ReLU) → Output layer (4 nodes)
-
-#### **Step 3: Experience Replay Buffer**
-- Store experiences as (state, action, reward, next_state, done) tuples
-- Randomly sample batches of experiences for training (prevents correlation issues)
-- Buffer size: 1000 experiences, Batch size: 32
-
-#### **Step 4: Action Selection (Epsilon-Greedy)**
-- **Exploration**: With probability ε (epsilon), choose random action
-- **Exploitation**: With probability (1-ε), choose action with highest Q-value
-- Start with ε = 1.0 (100% random), gradually decay to ε = 0.01
-
-#### **Step 5: Experience Collection**
-- Execute selected action in environment
-- Observe new state, reward, and whether episode ended
-- Store experience in replay buffer
-- Continue until episode terminates (goal reached or hole fallen)
-
-#### **Step 6: Q-Learning Update**
-- Sample random batch from replay buffer
-- For each experience, calculate target Q-value:
-  - **If terminated**: Target = reward
-  - **If not terminated**: Target = reward + γ × max(Q(next_state))
-- γ (gamma) = 0.9 (discount factor for future rewards)
-
-#### **Step 7: Neural Network Training**
-- Compute loss between current Q-values and target Q-values
-- Use Mean Squared Error (MSE) loss function
-- Update policy network weights using Adam optimizer
-- Learning rate: 0.001
-
-#### **Step 8: Target Network Synchronization**
-- Every 10 steps, copy policy network weights to target network
-- This prevents the "moving target" problem and stabilizes training
-
-#### **Step 9: Epsilon Decay**
-- Gradually reduce exploration rate: ε = max(ε - 1/episodes, 0.01)
-- Balance exploration vs exploitation as agent learns
-
-#### **Step 10: Convergence**
-- Train for 10,000 episodes
-- Agent learns optimal policy to navigate from start to goal
-- Save trained model and visualize learning progress
-
-### Key Innovations
-The key innovation of DQN is using a neural network to approximate Q-values instead of a lookup table, allowing it to handle large state spaces efficiently while using experience replay and target networks to ensure stable learning.
-
-### Files Generated
-- `frozen_lake_dql.pt`: Trained neural network model
-- `frozen_lake_dql.png`: Learning progress visualization (rewards and epsilon decay)
-
-## 🎯 General Chat Agent Deep Dive
-
-### Features
-- **Conversation Memory**: Maintains context across the entire session
-- **Tool Integration**: Built-in tools for calculations, time, and user info
+This is our most sophisticated conversational agent, featuring:
+- **Memory**: Remembers your name and preferences
+- **Tools**: Can calculate, tell time, and think step-by-step
 - **Interactive Mode**: Real-time conversation with command support
-- **Logging**: Comprehensive logfire integration for monitoring
+- **Observability**: Comprehensive logging with Logfire
 
-### Sequence Diagram
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant A as Agent
-    participant T as Tools
-    participant L as Logfire
-    participant G as Gemini Model
-
-    Note over U,G: Interactive Mode Session Start
-    
-    U->>A: Start interactive mode
-    A->>L: Create session span
-    A->>U: Display welcome message
-    
-    loop Conversation Loop
-        U->>A: Send user input
-        A->>L: Create message span
-        A->>L: Log input attributes
-        
-        alt Has conversation history
-            A->>G: Run with message_history
-        else First message
-            A->>G: Run without history
-        end
-        
-        G->>A: Return response
-        
-        alt Tool call needed
-            A->>T: Execute tool (calculate/time/remember/think)
-            T->>L: Create tool span
-            T->>L: Log tool attributes
-            T->>A: Return tool result
-            A->>G: Continue with tool result
-            G->>A: Return final response
-        end
-        
-        A->>L: Log response attributes
-        A->>U: Display response
-        A->>A: Update conversation_messages = result.all_messages()
-    end
-    
-    U->>A: Send quit command
-    A->>L: Log session end
-    A->>U: Display goodbye message
-```
-
-### Tool Execution Flow
-
-```mermaid
-sequenceDiagram
-    participant A as Agent
-    participant T as Tool
-    participant L as Logfire
-    participant G as Gemini Model
-
-    A->>G: Process user input
-    G->>A: Decide to use tool
-    
-    A->>T: Call tool with parameters
-    T->>L: Create tool span
-    T->>L: Set input attributes
-    
-    alt Tool execution
-        T->>T: Execute tool logic
-        T->>L: Set result attributes
-        T->>A: Return tool result
-    else Tool error
-        T->>L: Set error attributes
-        T->>A: Return error message
-    end
-    
-    A->>G: Continue with tool result
-    G->>A: Generate final response
-    A->>L: Log response metrics
-```
-
-### Tools Available
-1. **`remember_user_info`**: Store user name and interests
-2. **`get_current_time`**: Get current date and time
-3. **`calculate_simple`**: Perform basic mathematical operations
-4. **`get_thinking`**: Step-by-step problem analysis
-
-### Usage Examples
-
-#### Demo Mode
 ```bash
+# Demo mode - see all capabilities
 python src/04_general_chat_agent.py
-```
-Runs predefined conversations showcasing all agent capabilities.
 
-#### Interactive Mode
-```bash
+# Interactive mode - chat live
 python src/04_general_chat_agent.py --interactive
 ```
 
-**Available Commands:**
-- `help` - Show available commands
-- `quit`, `exit`, `bye` - End conversation
-- Any other input - Chat with the agent
+### 3. **Frozen Lake Agent** - Reinforcement Learning in Action
+*"Can AI learn to navigate a dangerous environment?"*
 
-**Example Conversation:**
-```
-👤 You: Hi! My name is Alice and I love reading.
-🤖 Assistant: Nice to meet you, Alice! I'll remember that you enjoy reading.
+A complete RL implementation using Deep Q-Networks:
+- Neural network-based learning
+- Experience replay for stability
+- Visual learning progress tracking
 
-👤 You: What do you remember about me?
-🤖 Assistant: I remember that your name is Alice and you love reading!
-
-👤 You: Can you calculate 15 * 7 + 23?
-🤖 Assistant: The answer is 128.
-
-👤 You: What time is it right now?
-🤖 Assistant: The current time is 2025-07-01 14:30:00.
+```bash
+python rl-games/frozen_lake_dqn.py
 ```
 
-## 📊 Monitoring & Logging
+### 4. **ARC Agent** - Abstract Reasoning 🧠
+*"Can AI solve visual reasoning puzzles?"*
 
-All agents use **logfire** for comprehensive monitoring:
+Our most advanced agent tackles the Abstraction and Reasoning Corpus:
+- **Grid Analysis**: Understanding spatial patterns
+- **Transformation DSL**: Domain-specific language for operations
+- **Step-by-step Reasoning**: Breaking complex problems into solvable pieces
+- **Confidence Scoring**: Self-assessment of solutions
 
-### Logfire Features
-- **Automatic HTTP request logging** (when AsyncClient is used)
-- **Tool execution spans** with detailed attributes
-- **Conversation session tracking**
-- **Performance metrics** (response times, token usage)
-- **Error tracking** and debugging information
+```bash
+python src/14_simple_arc_agent.py
+```
 
-### Logfire Configuration
+## 🎮 The Generic Agentic Pattern for Grid Games
+
+After building multiple agents, we've identified a powerful pattern for solving grid-based problems. Here's the framework:
+
+### Core Components
+
 ```python
-# Configure logfire (sends data only if token is present)
+# 1. Grid Analysis Tools
+@agent.tool
+async def analyze_grid(ctx: RunContext, grid: List[List[int]], name: str = "grid") -> GridAnalysis:
+    """Understand the structure and patterns in a grid"""
+    # Analyze shape, values, patterns
+    # Return structured analysis
+
+# 2. Transformation Tools  
+@agent.tool
+async def apply_transformation(ctx: RunContext, grid: List[List[int]], operation: str, **params) -> List[List[int]]:
+    """Apply geometric or value transformations"""
+    # Execute operations like rotate, flip, replace
+    # Return transformed grid
+
+# 3. Validation Tools
+@agent.tool
+async def compare_grids(ctx: RunContext, grid1: List[List[int]], grid2: List[List[int]]) -> bool:
+    """Compare grids and validate solutions"""
+    # Check if transformation produces expected result
+```
+
+### The Reasoning Loop
+
+1. **Analyze** → Understand the current state
+2. **Hypothesize** → Propose transformations
+3. **Apply** → Execute the transformation
+4. **Validate** → Check if result matches expectation
+5. **Iterate** → Repeat until solution found
+
+### Why This Pattern Works
+
+- **Modular**: Each tool has a single responsibility
+- **Composable**: Tools can be combined in any order
+- **Observable**: Every step is logged and traceable
+- **Extensible**: Easy to add new operations or analysis types
+
+## 🔍 Deep Dive: ARC Agent Architecture
+
+The ARC agent demonstrates our most sophisticated reasoning system:
+
+### Problem Decomposition
+```
+Input Grid → Analysis → Pattern Recognition → Transformation Planning → Execution → Validation
+```
+
+### Key Innovations
+
+1. **Domain-Specific Language (DSL)**: A set of primitive operations that can be combined
+2. **Confidence Scoring**: The agent assesses its own confidence in solutions
+3. **Step-by-step Reasoning**: Each transformation is documented and explained
+4. **Multi-example Learning**: Uses multiple training examples to generalize patterns
+
+### Example ARC Solution
+```python
+# Agent identifies a rotation pattern
+transformation_steps = [
+    TransformationStep(
+        operation="rotate_90",
+        description="Rotate the grid 90 degrees clockwise"
+    ),
+    TransformationStep(
+        operation="replace_values", 
+        parameters={"old_value": 1, "new_value": 2},
+        description="Replace all 1s with 2s"
+    )
+]
+```
+
+## 📊 Observability with Logfire
+
+Every agent includes comprehensive logging:
+
+```python
+# Automatic instrumentation
 logfire.configure(send_to_logfire='if-token-present')
 logfire.instrument_pydantic_ai()
+
+# Custom spans for business logic
+with logfire.span("analyze_grid") as span:
+    span.set_attribute("grid_shape", grid.shape)
+    span.set_attribute("unique_values", values)
 ```
 
-## 🏗️ Architecture
+**What We Track:**
+- Tool execution times and success rates
+- Agent reasoning patterns and confidence scores
+- Error rates and debugging information
+- User interaction flows
 
-### Agent Structure
-Each agent follows a consistent pattern:
-1. **Dependencies**: External APIs, clients, configuration
-2. **Tools**: Specialized functions with `@agent.tool` decorator
-3. **Agent Configuration**: Model, system prompt, output types
-4. **Main Logic**: Async execution with proper error handling
+## 🛠️ Building Your Own Agent
 
-### Key Components
-- **`pydantic_ai.Agent`**: Core agent framework
-- **`httpx.AsyncClient`**: Asynchronous HTTP client
-- **`logfire`**: Observability and monitoring
-- **`pydantic.BaseModel`**: Data validation and serialization
-
-## 🔧 Development
-
-### Adding New Tools
+### Step 1: Define Your Tools
 ```python
 @agent.tool
-async def my_new_tool(ctx: RunContext, param: str) -> str:
-    """Tool description."""
-    with logfire.span("my_new_tool") as span:
-        # Tool logic here
-        span.set_attribute("result", "success")
-        return "Tool result"
+async def my_tool(ctx: RunContext, input_data: str) -> str:
+    """What your tool does"""
+    with logfire.span("my_tool") as span:
+        # Your logic here
+        result = process_data(input_data)
+        span.set_attribute("result", result)
+        return result
 ```
 
-### Adding New Agents
-1. Create new file in `src/` directory
-2. Follow the established pattern from existing agents
-3. Add proper logging and error handling
-4. Update this README with documentation
+### Step 2: Create Your Agent
+```python
+agent = Agent(
+    model="gemini-2.0-flash-exp",
+    system_prompt="You are a helpful assistant...",
+    output_type=MyOutputType
+)
+```
 
-## 📈 Performance
+### Step 3: Add Observability
+```python
+# Automatic logging of all operations
+logfire.instrument_pydantic_ai()
 
-### Optimization Tips
-- Use `AsyncClient` for concurrent HTTP requests
-- Implement proper error handling with `ModelRetry`
-- Use logfire spans for performance monitoring
-- Leverage conversation memory for context-aware responses
+# Custom metrics
+logfire.info("Agent started", agent_type="my_agent")
+```
 
-### Monitoring Metrics
-- Response times per tool
-- Token usage and costs
-- Error rates and types
-- User interaction patterns
+### Step 4: Test and Iterate
+```python
+result = await agent.run("Your prompt here")
+print(f"Confidence: {result.output.confidence}")
+```
+
+## 🎯 Key Learnings
+
+### 1. **Tool Design Matters**
+- Tools should be atomic and composable
+- Clear input/output contracts prevent errors
+- Good tool descriptions help the agent choose correctly
+
+### 2. **Observability is Essential**
+- Logfire provides insights into agent behavior
+- Spans help debug complex reasoning chains
+- Metrics reveal performance bottlenecks
+
+### 3. **Pattern Recognition is Powerful**
+- The grid analysis pattern works across many domains
+- Breaking problems into steps improves success rates
+- Validation at each step catches errors early
+
+### 4. **Confidence Scoring Helps**
+- Agents can assess their own reliability
+- Low confidence triggers different strategies
+- Helps users understand when to trust the agent
+
+## 🚀 What's Next?
+
+We're exploring:
+- **Multi-agent systems** - Agents that collaborate
+- **Learning from feedback** - Improving based on user corrections
+- **Visual reasoning** - Processing images and diagrams
+- **Planning and execution** - Breaking complex tasks into steps
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Add your agent or improvements
-4. Include proper documentation
-5. Submit a pull request
+We'd love your help! Here's how to contribute:
 
-## 📄 License
+1. **Try the agents** - Run them and share your experiences
+2. **Add new tools** - Extend existing agents with new capabilities
+3. **Create new agents** - Build agents for new domains
+4. **Improve documentation** - Help others understand the patterns
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## 📚 Resources
 
-## 🙏 Acknowledgments
+- [Pydantic-AI Documentation](https://docs.pydantic-ai.com/)
+- [Logfire Observability](https://logfire.com/)
+- [ARC Challenge](https://github.com/fchollet/ARC)
+- [Reinforcement Learning Basics](https://spinningup.openai.com/)
 
-- **pydantic_ai**: AI agent framework
-- **logfire**: Observability platform
-- **httpx**: Async HTTP client
-- **Gemini 2.0 Flash**: AI model powering the agents 
+---
+
+*Built with ❤️ using Pydantic-AI, Logfire, and a lot of curiosity about what AI can do.*
+
+For detailed technical documentation, see the [technical_docs/](technical_docs/) folder. 
